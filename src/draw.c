@@ -1,11 +1,12 @@
-#include <math.h>
+#include "draw.h"
+#include "screen.h"
+#include "transform.h"
+#include "misc.h"
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
-#include "draw.h"
-#include "screen.h"
-#include "transform.h"
 
 void draw_point_2d(vec2 vec, char c) {
     int framebuf_x = to_framebuf_x(vec.x);
@@ -130,15 +131,12 @@ void draw_line_2d(vec2 p1, vec2 p2, char c) {
     draw_line_framebuf_coords_split(to_framebuf_x(p1.x), to_framebuf_y(p1.y), to_framebuf_x(p2.x), to_framebuf_y(p2.y), c);
 }
 
-void draw_line_horizontal_framebuf_coords_split_w_bounds_checking(int left_framebuf_x, int framebuf_y, size_t steps, char c) {
-    if (!inside_framebuf(left_framebuf_x + steps, framebuf_y) && !inside_framebuf(left_framebuf_x + steps, framebuf_y)) {
+void draw_line_horizontal_w_bounds_checking(int left_framebuf_x, int framebuf_y, size_t steps, char c) {
+    if (!inside_framebuf(left_framebuf_x + steps, framebuf_y) && !(0 <= framebuf_y && framebuf_y < SCREEN_HEIGHT)) {
         return;
     }
     int lim = min_int(left_framebuf_x + steps, SCREEN_WIDTH - 1);
     for (int current = max_int(left_framebuf_x, 0); current < lim; current += 1) {
-        if (!(0 <= framebuf_y && framebuf_y < SCREEN_HEIGHT)) {
-            continue;
-        }
         draw_framebuf_point_w_no_bounds_checking(current, framebuf_y, c);
     }
 }
@@ -148,7 +146,7 @@ void draw_filled_bottom_flat_triangle_framebuf_coords(framebuf_coords v1, frameb
     // http://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
 
     if (!(v2.x < v3.x)) {
-        swap_framebuf_coords(&v2, &v3);
+        SWAP_UNSAFE(framebuf_coords, v2, v3);
     }
 
     float change_left = (v2.x - v1.x) / (float)(v2.y - v1.y);
@@ -158,7 +156,7 @@ void draw_filled_bottom_flat_triangle_framebuf_coords(framebuf_coords v1, frameb
     float current_right = v1.x;
 
     for (int scanlineY = v1.y; scanlineY <= v2.y; scanlineY++) {
-        draw_line_horizontal_framebuf_coords_split_w_bounds_checking(current_left, scanlineY, current_right - current_left, c);
+        draw_line_horizontal_w_bounds_checking(current_left, scanlineY, current_right - current_left, c);
         current_left += change_left;
         current_right += change_right;
     }
@@ -169,7 +167,7 @@ void draw_filled_top_flat_triangle_framebuf_coords(framebuf_coords v1, framebuf_
     // http://www.sunshine2k.de/coding/java/TriangleRasterization/TriangleRasterization.html
 
     if (!(v1.x < v2.x)) {
-        swap_framebuf_coords(&v1, &v2);
+        SWAP_UNSAFE(framebuf_coords, v1, v2);
     }
 
     float change_left = (v3.x - v1.x) / (float)(v3.y - v1.y);
@@ -179,7 +177,7 @@ void draw_filled_top_flat_triangle_framebuf_coords(framebuf_coords v1, framebuf_
     float current_right = v3.x;
 
     for (int scanlineY = v3.y; scanlineY > v1.y; scanlineY--) {
-        draw_line_horizontal_framebuf_coords_split_w_bounds_checking(current_left, scanlineY, current_right - current_left, c);
+        draw_line_horizontal_w_bounds_checking(current_left, scanlineY, current_right - current_left, c);
         current_left -= change_left;
         current_right -= change_right;
     }
@@ -191,13 +189,13 @@ void draw_filled_triangle_framebuf_coords(framebuf_coords v1, framebuf_coords v2
 
     /* sort points and ensure v1.y <= v2.y <= v3.y */
     if (v2.y < v1.y) {
-        swap_framebuf_coords(&v2, &v1);
+        SWAP_UNSAFE(framebuf_coords, v2, v1);
     }
     if (v3.y < v1.y) {
-        swap_framebuf_coords(&v3, &v1);
+        SWAP_UNSAFE(framebuf_coords, v3, v1);
     }
     if (v3.y < v2.y) {
-        swap_framebuf_coords(&v3, &v2);
+        SWAP_UNSAFE(framebuf_coords, v3, v2);
     }
 
     if (v1.y == v2.y && v2.y == v3.y) {
@@ -225,25 +223,4 @@ void draw_triangle_2d(vec2 p1, vec2 p2, vec2 p3, char c) {
     draw_line_framebuf_coords(v1, v2, c);
     draw_line_framebuf_coords(v2, v3, c);
     draw_line_framebuf_coords(v3, v1, c);
-}
-
-static float fov_angle_rad = M_PI / 3; // 60 degrees
-
-void draw_filled_triangle_3d(vec3 p1, vec3 p2, vec3 p3, char c) {
-    vec3 p1_to_p3 = sum_vec3(p3, scaled_vec3(p1, -1));
-    vec3 p1_to_p2 = sum_vec3(p2, scaled_vec3(p1, -1));
-
-    vec3 triangle_normal = cross_vec3(p1_to_p3, p1_to_p2);
-
-    // backface culling:
-    if (dot_vec3(p1, triangle_normal) >= 0) {
-        return;
-    }
-
-    // transform to screen space:
-    vec2 p1_2d = vec3_projected_as_vec2(p1, fov_angle_rad, aspect_ratio);
-    vec2 p2_2d = vec3_projected_as_vec2(p2, fov_angle_rad, aspect_ratio);
-    vec2 p3_2d = vec3_projected_as_vec2(p3, fov_angle_rad, aspect_ratio);
-
-    draw_filled_triangle_2d(p1_2d, p2_2d, p3_2d, c);
 }

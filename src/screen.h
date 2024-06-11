@@ -21,18 +21,18 @@ void screen_clear(void);
 
 void screen_refresh(void);
 
+// frame buffer related functions:
+// -----------------------------------------------------------------------------
+
 void draw_framebuf_point_w_no_bounds_checking(int framebuf_x, int framebuf_y, char c);
 
 void draw_framebuf_point_w_bounds_checking(int framebuf_x, int framebuf_y, char c);
-
-// helper functions for frame buffer:
-// -----------------------------------------------------------------------------
 
 int to_framebuf_x(float screen_x);
 
 int to_framebuf_y(float screen_y);
 
-bool inside_framebuf(int framebuf_x, int framebuf_y);
+bool inside_framebuf(int framebuf_x, int framebuf_y); // also works for depthbuf
 
 typedef struct {
     int x;
@@ -41,4 +41,9 @@ typedef struct {
 
 framebuf_coords to_framebuf_coords(vec2 v);
 
-void swap_framebuf_coords(framebuf_coords* v1_ptr, framebuf_coords* v2_ptr);
+// depth buffer related functions:
+// -----------------------------------------------------------------------------
+
+bool depthbuf_should_plot(int depthbuf_x, int depthbuf_y, float depth);
+
+void depthbuf_plot_w_no_bounds_checking(int depthbuf_x, int depthbuf_y, float depth);

@@ -24,7 +24,7 @@ void framebuf_clear(void) {
 void depthbuf_clear(void) {
     for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
         for (size_t x = 0; x < SCREEN_WIDTH; x++) {
-            depthbuf[y][x] = 0;
+            depthbuf[y][x] = INFINITY;
         }
     }
 }
@@ -55,7 +55,7 @@ void screen_refresh(void) {
     }
 }
 
-// helper functions for frame buffer:
+// frame buffer related functions:
 // -----------------------------------------------------------------------------
 
 int to_framebuf_x(float screen_x) {
@@ -93,4 +93,15 @@ void swap_framebuf_coords(framebuf_coords* v1_ptr, framebuf_coords* v2_ptr) {
     framebuf_coords t = *v1_ptr;
     *v1_ptr = *v2_ptr;
     *v2_ptr = t;
+}
+
+// depth buffer related functions:
+// -----------------------------------------------------------------------------
+
+bool depthbuf_should_plot(int depthbuf_x, int depthbuf_y, float depth) {
+    return depth < depthbuf[depthbuf_y][depthbuf_x];
+}
+
+void depthbuf_plot_w_no_bounds_checking(int depthbuf_x, int depthbuf_y, float depth) {
+    depthbuf[depthbuf_y][depthbuf_x] = depth;
 }

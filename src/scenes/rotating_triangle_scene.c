@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "draw.h"
+#include "draw3d.h"
 #include "scenes/scene.h"
 #include "transform.h"
 #include "rotating_triangle_scene.h"
@@ -40,7 +40,7 @@ void rotating_triangle_scene_update(void** context_ptr) {
 
     int64_t angle_deg = triangle_ptr->angle_deg;
     float angle_rad = to_angle_in_radians(-angle_deg);
-    static vec3 shift = {0, 0, 1.75f};
+    static vec3 shift = {0, 0, 1.1f};
 
     vec3 v1 = {-0.5, 0.7, 0.f};
     vec3 v2 = {-0.5, -0.7f, 0.f};
@@ -54,14 +54,14 @@ void rotating_triangle_scene_update(void** context_ptr) {
     v2 = sum_vec3(v2, shift);
     v3 = sum_vec3(v3, shift);
 
-    draw_filled_triangle_3d(v1, v2, v3, '*');
-    draw_filled_triangle_3d(v1, v3, v2, '.');
+    draw_triangle_3d(v1, v2, v3, '*');
+    draw_triangle_3d(v1, v3, v2, '.');
 
 #ifdef DEBUG
     printf("angle_rad: %.2f\n", angle_rad);
     CLEAR_LINE();
     MOVE_UP_LINES(1);
-    sleep_portable(200);
+    sleep_portable(1000);
 #endif
 
     if (angle_deg == 360) {
