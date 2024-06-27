@@ -1,43 +1,64 @@
+#include "../example_scenes/example_scenes.h"
+#include "misc.h"
+#include "scene.h"
+#include "screen.h"
+
+#ifdef DEBUG
+#include "time.h"
+#endif
+
 #include <signal.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "misc.h"
-#include "screen.h"
-
-#include "scenes/scene.h"
-#include "scenes/star_scene.h"
-#include "scenes/spiral_scene.h"
-#include "scenes/cube_scene.h"
-#include "scenes/wavy_triangle_scene.h"
-#include "scenes/rotating_triangle_scene.h"
-
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-parameter"
-
-void on_sigint(int sig) {
+static void on_sigint(int sig) {
+    MARK_UNUSED(sig);
     screen_deinit();
     exit(0);
 }
 
-#pragma GCC diagnostic pop
-
 int main(void) {
-    signal(SIGINT, on_sigint);
+    enable_raw_mode();
     screen_init();
+    signal(SIGINT, on_sigint);
 
-    scene_type scene = rotating_triangle_scene;
+    const scene_type scene = g_rgb_triangle_scene; // change scene here
     void** context_ptr = scene.create();
 
     bool on_running = true;
+    int previous_time_ms = get_current_time_ms();
+    int lag_ms = 0.;
+
     while (on_running) {
-        scene.update(context_ptr);
+        const int current_time_ms = get_current_time_ms();
+        const int elapsed_ms = current_time_ms - previous_time_ms;
+        previous_time_ms = current_time_ms;
+        lag_ms += elapsed_ms;
+
+        char c;
+        if (on_key(&c)) {
+            if (c == 'q') {
+                on_running = false;
+            }
+            if (scene.flags & SCENE_OPS_ON_KEY) {
+                scene.on_key(context_ptr, c);
+            }
+        }
+
+        while (lag_ms >= MS_PER_UPDATE) {
+            scene.update(context_ptr);
+            lag_ms -= MS_PER_UPDATE;
+        }
+
+        scene.render(context_ptr);
+
+        printf("q: exit" NEW_LINE);
+        g_extra_lines += 1;
+        screen_restore_line_cursor();
 
         screen_refresh();
         screen_clear();
-
-        sleep_portable(200);
     }
 
     scene.destroy(context_ptr);

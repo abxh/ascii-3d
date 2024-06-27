@@ -1,30 +1,42 @@
-
+#include <assert.h>
 #include <math.h>
 #include <stdio.h>
-#include <string.h>
 
 #include "misc.h"
 #include "screen.h"
 
-char framebuf[SCREEN_HEIGHT][SCREEN_WIDTH];
+char g_framebuf[SCREEN_HEIGHT][SCREEN_WIDTH];
 
-float depthbuf[SCREEN_HEIGHT][SCREEN_WIDTH];
+float g_depthbuf[SCREEN_HEIGHT][SCREEN_WIDTH];
 
-void clear_lines(void) {
+colorint_str g_colorbuf[SCREEN_HEIGHT][SCREEN_WIDTH];
+
+size_t g_extra_lines = 0;
+
+static inline void framebuf_clear(void) {
     for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
-        CLEAR_LINE();
-        putchar('\n');
+        for (size_t x = 0; x < SCREEN_WIDTH; x++) {
+            g_framebuf[y][x] = ' ';
+        }
     }
 }
 
-void framebuf_clear(void) {
-    memset(framebuf, ' ', sizeof framebuf);
-}
-
-void depthbuf_clear(void) {
+static inline void depthbuf_clear(void) {
     for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
         for (size_t x = 0; x < SCREEN_WIDTH; x++) {
+<<<<<<< HEAD
             depthbuf[y][x] = INFINITY;
+=======
+            g_depthbuf[y][x] = INFINITY;
+        }
+    }
+}
+
+static inline void colorbuf_clear(void) {
+    for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
+        for (size_t x = 0; x < SCREEN_WIDTH; x++) {
+            g_colorbuf[y][x] = (colorint_str){.r = "255", .g = "255", .b = "255"};
+>>>>>>> f44c2649a18c14202680230540944f32b55593d9
         }
     }
 }
@@ -32,25 +44,42 @@ void depthbuf_clear(void) {
 void screen_clear(void) {
     framebuf_clear();
     depthbuf_clear();
+    colorbuf_clear();
 }
 
 void screen_init(void) {
     printf(CSI_ESC CSI_HIDECURSOR);
-    framebuf_clear();
-    clear_lines();
+
+    for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
+        CLEAR_LINE();
+        printf(NEW_LINE);
+    }
+
+    screen_clear();
 }
 
 void screen_deinit(void) {
     printf(CSI_ESC CSI_SHOWCURSOR);
+    printf(CSI_ESC CSI_RESETCOLOR);
+}
+
+void screen_restore_line_cursor(void) {
+    for (size_t i = 0; i < g_extra_lines; i++) {
+        MOVE_UP_LINES(1);
+    }
+    g_extra_lines = 0;
 }
 
 void screen_refresh(void) {
     MOVE_UP_LINES(SCREEN_HEIGHT);
     putchar('\r');
+
     for (size_t y = 0; y < SCREEN_HEIGHT; y++) {
         for (size_t x = 0; x < SCREEN_WIDTH; x++) {
-            putchar(framebuf[y][x]);
+            printf(CSI_ESC CSI_SETCOLOR_INITIALS "%.3s;%.3s;%.3s;m", g_colorbuf[y][x].r, g_colorbuf[y][x].g, g_colorbuf[y][x].b);
+            putchar(g_framebuf[y][x]);
         }
+<<<<<<< HEAD
         putchar('\n');
     }
 }
@@ -80,19 +109,12 @@ void draw_framebuf_point_w_no_bounds_checking(int framebuf_x, int framebuf_y, ch
 void draw_framebuf_point_w_bounds_checking(int framebuf_x, int framebuf_y, char c) {
     if (!inside_framebuf(framebuf_x, framebuf_y)) {
         return;
+=======
+        printf(NEW_LINE);
+>>>>>>> f44c2649a18c14202680230540944f32b55593d9
     }
 
-    framebuf[framebuf_y][framebuf_x] = c;
-}
-
-framebuf_coords to_framebuf_coords(vec2 v) {
-    return (framebuf_coords){.x = to_framebuf_x(v.x), .y = to_framebuf_y(v.y)};
-}
-
-void swap_framebuf_coords(framebuf_coords* v1_ptr, framebuf_coords* v2_ptr) {
-    framebuf_coords t = *v1_ptr;
-    *v1_ptr = *v2_ptr;
-    *v2_ptr = t;
+    printf(CSI_ESC CSI_RESETCOLOR);
 }
 
 // depth buffer related functions:

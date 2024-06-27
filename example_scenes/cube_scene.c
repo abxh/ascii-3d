@@ -1,16 +1,19 @@
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <math.h>
-
 #include "cube_scene.h"
+#include "color.h"
 #include "draw.h"
-#include "scenes/scene.h"
-#include "screen.h"
+#include "scene.h"
 #include "transform.h"
+#include "screen.h"
 
 #ifdef DEBUG
 #include "misc.h"
+#endif
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+
+#ifdef DEBUG
 #include <stdio.h>
 #endif
 
@@ -18,8 +21,11 @@ typedef struct {
     int64_t angle_deg;
 } cube;
 
-scene_type cube_scene = {
-    .flags = SCENE_OPS_NOP, .create = cube_scene_create, .destroy = cube_scene_destroy, .update = cube_scene_update};
+const scene_type g_cube_scene = {.flags = SCENE_OPS_NOP,
+                                 .create = cube_scene_create,
+                                 .destroy = cube_scene_destroy,
+                                 .update = cube_scene_update,
+                                 .render = cube_scene_render};
 
 // clang-format off
 
@@ -78,9 +84,19 @@ void cube_scene_destroy(void** context_ptr) {
 static int stack[16];
 static bool visited[8];
 
+static const float fov_angle_rad = PI / 3;
+static const vec3 shift = {0, 0, 1.75f};
+
 void cube_scene_update(void** context_ptr) {
     cube* cube_ptr = (cube*)context_ptr[CUBE_OBJ];
+    cube_ptr->angle_deg += (int)(10.f * MS_PER_UPDATE / 400.f);
+}
+
+void cube_scene_render(void** context_ptr) {
+    cube* cube_ptr = (cube*)context_ptr[CUBE_OBJ];
     int64_t angle_deg = cube_ptr->angle_deg;
+
+    float angle_rad = to_angle_in_radians((float)-angle_deg);
 
     size_t count = 0;
     for (size_t i = 0; i < sizeof(stack) / sizeof(*stack); i++) {
@@ -91,12 +107,9 @@ void cube_scene_update(void** context_ptr) {
     }
 
 #ifdef DEBUG
-    printf("edges:\n");
+    printf("edges:" NEW_LINE);
     size_t edge_count = 0;
 #endif
-    float angle_rad = to_angle_in_radians(-angle_deg);
-    static float fov_angle_rad = M_PI / 3;
-    static vec3 shift = {0, 0, 1.75f};
 
     stack[count++] = 0;
 
@@ -110,26 +123,28 @@ void cube_scene_update(void** context_ptr) {
             }
 
             vec3 v1_3d = sum_vec3(rotate_around_y_axis(verticies[current], angle_rad), shift);
+<<<<<<< HEAD:src/scenes/cube_scene.c
             vec2 v1 = vec3_projected_to_screen_space(v1_3d, fov_angle_rad, aspect_ratio);
 
             vec3 v2_3d = sum_vec3(rotate_around_y_axis(verticies[i], angle_rad), shift);
             vec2 v2 = vec3_projected_to_screen_space(v2_3d, fov_angle_rad, aspect_ratio);
+=======
+            vec2 v1 = vec3_projected_to_screen_space(v1_3d, fov_angle_rad, ASPECT_RATIO);
 
-            draw_line_2d(v1, v2, '.');
+            vec3 v2_3d = sum_vec3(rotate_around_y_axis(verticies[i], angle_rad), shift);
+            vec2 v2 = vec3_projected_to_screen_space(v2_3d, fov_angle_rad, ASPECT_RATIO);
+
+            draw_line_2d((vec2[2]){v1, v2}, (color[2]){color_white, color_white}, '.');
+>>>>>>> f44c2649a18c14202680230540944f32b55593d9:example_scenes/cube_scene.c
+
 #ifdef DEBUG
             CLEAR_LINE();
-            printf("%zu: (%.2f, %.2f) -> (%.2f, %2.f)\n", ++edge_count, v1.x, v1.y, v2.x, v2.y);
+            printf("%zu: (%.2f, %.2f) -> (%.2f, %2.f)" NEW_LINE, ++edge_count, (double)v1.x, (double)v1.y, (double)v2.x, (double)v2.y);
 #endif
             stack[count++] = i;
         }
     }
 #ifdef DEBUG
-    CLEAR_LINE();
-    MOVE_UP_LINES(14);
+    g_extra_lines += 15;
 #endif
-
-    if (angle_deg == 360) {
-        cube_ptr->angle_deg = 0;
-    }
-    cube_ptr->angle_deg += 10;
 }
